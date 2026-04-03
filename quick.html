@@ -310,26 +310,12 @@ main {
 /* ══════════════════════════
    EXERCISE PICKER
    ══════════════════════════ */
-.picker-overlay {
-  position:fixed; top:0; left:0; right:0; bottom:0; z-index:500;
-  background:rgba(0,0,0,.7);
-  display:flex; align-items:flex-end; justify-content:center;
-  visibility:hidden; opacity:0; pointer-events:none;
-  transition:opacity .2s, visibility .2s;
-}
-.picker-overlay.show { visibility:visible; opacity:1; pointer-events:auto; }
-.picker {
-  background:var(--card); border-radius:20px 20px 0 0;
-  width:100%; max-width:500px; max-height:80vh;
-  padding:20px 16px calc(20px + var(--safe-b));
-  overflow-y:auto; transition:background .3s;
-}
-.picker h2 { font-size:17px; font-weight:800; margin-bottom:12px; }
-.picker-close {
-  float:right; width:32px; height:32px; border-radius:50%;
-  border:1px solid var(--border); background:var(--card2);
-  color:var(--text2); font-size:16px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
+/* ── PICKER (inline view) ── */
+.picker-back {
+  display:flex; align-items:center; gap:8px; margin-bottom:14px;
+  background:none; border:none; color:var(--accent2);
+  font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;
+  padding:4px 0;
 }
 .picker-search {
   width:100%; padding:13px 14px; border-radius:12px;
@@ -351,12 +337,12 @@ main {
 }
 .m-pill.on { background:var(--accent); color:#fff; border-color:var(--accent); }
 .pick-item {
-  padding:13px 14px; border-radius:12px; background:var(--card2);
+  padding:13px 14px; border-radius:12px; background:var(--card);
   margin-bottom:5px; cursor:pointer; font-size:14px; font-weight:600;
   display:flex; justify-content:space-between; align-items:center;
-  transition:all .15s;
+  border:1px solid var(--border); transition:all .15s;
 }
-.pick-item:active { background:var(--accent-bg); }
+.pick-item:active { background:var(--accent-bg); border-color:var(--accent); }
 .pick-item .tag {
   font-size:10px; color:var(--accent2); background:var(--accent-bg);
   padding:3px 8px; border-radius:6px; font-weight:700;
@@ -412,17 +398,7 @@ main {
   </div>
 </div>
 
-<!-- EXERCISE PICKER -->
-<div class="picker-overlay" id="pickerOv" onclick="if(event.target===this)closePicker()">
-  <div class="picker">
-    <button class="picker-close" onclick="closePicker()">&#10005;</button>
-    <h2>Aggiungi esercizio</h2>
-    <input class="picker-search" id="pSearch" placeholder="Cerca esercizio..." oninput="filterPick()">
-    <div class="picker-muscles" id="pMuscles"></div>
-    <div id="pList"></div>
-    <button class="pick-custom" onclick="addCustom()">+ Crea personalizzato</button>
-  </div>
-</div>
+<!-- PICKER: now rendered inline inside #app -->
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -545,6 +521,7 @@ fbdb.ref('gym-quick').on('value',snap=>{
 //  RENDER
 // ══════════════════════════
 function render(){
+  if(pickerOpen){renderPicker();return;}
   const{day}=getDay();
   const dayName=new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
   let h=`<div class="date-bar">${dayName}</div>`;
@@ -612,12 +589,7 @@ function setProfile(p){
   render();
 }
 
-function addEx(name){
-  const{data,day}=getDay();
-  day.ex.push({name,sets:[{kg:'',reps:''}],rpe:0});
-  save(data);closePicker();render();
-  setTimeout(()=>{const m=document.getElementById('app');m.scrollTop=m.scrollHeight;},100);
-}
+function addEx(name){pickEx(name);}
 function delEx(ei){
   if(!confirm('Rimuovere questo esercizio?'))return;
   const{data,day}=getDay();day.ex.splice(ei,1);save(data);render();
@@ -639,42 +611,61 @@ function setRPE(ei,v){
 }
 
 // ══════════════════════════
-//  EXERCISE PICKER
+//  EXERCISE PICKER (inline view)
 // ══════════════════════════
+let pickerOpen=false;
+
 function openPicker(){
+  pickerOpen=true;
   mFilter='Tutti';
-  document.getElementById('pSearch').value='';
-  renderMuscles();filterPick();
-  document.getElementById('pickerOv').classList.add('show');
+  renderPicker();
 }
-function closePicker(){document.getElementById('pickerOv').classList.remove('show');}
-
-function renderMuscles(){
-  document.getElementById('pMuscles').innerHTML=MUSCLES.map(m=>
-    `<button class="m-pill ${m===mFilter?'on':''}" onclick="mFilter='${m}';renderMuscles();filterPick()">${m}</button>`
-  ).join('');
+function closePicker(){
+  pickerOpen=false;
+  render();
 }
 
-function filterPick(){
-  const q=(document.getElementById('pSearch').value||'').toLowerCase();
+function renderPicker(){
+  const q=(document.getElementById('pSearch2')?document.getElementById('pSearch2').value:'').toLowerCase();
   let list=[...EX];
   if(mFilter!=='Tutti')list=list.filter(e=>e.m===mFilter);
   if(q)list=list.filter(e=>e.n.toLowerCase().includes(q)||e.m.toLowerCase().includes(q));
 
-  // Recenti in cima
-  const{day}=getDay();
-  const recent=day.ex.map(e=>e.name);
+  const muscles=MUSCLES.map(m=>
+    `<button class="m-pill ${m===mFilter?'on':''}" onclick="mFilter='${m}';renderPicker()">${m}</button>`
+  ).join('');
 
-  document.getElementById('pList').innerHTML=list.slice(0,30).map(e=>
-    `<div class="pick-item" onclick="addEx('${e.n.replace(/'/g,"\\'")}')">
+  const items=list.slice(0,40).map(e=>
+    `<div class="pick-item" onclick="pickEx('${e.n.replace(/'/g,"\\'")}')">
       <span>${e.n}</span><span class="tag">${e.m}</span>
     </div>`
   ).join('');
+
+  document.getElementById('app').innerHTML=`
+    <button class="picker-back" onclick="closePicker()">&#8592; Torna all'allenamento</button>
+    <input class="picker-search" id="pSearch2" placeholder="Cerca esercizio..." oninput="renderPicker()" value="${q}">
+    <div class="picker-muscles">${muscles}</div>
+    <div>${items}</div>
+    <button class="pick-custom" onclick="addCustomFromPicker()">+ Crea personalizzato</button>
+  `;
+
+  // Mantieni il focus sull'input se stava scrivendo
+  if(q){const inp=document.getElementById('pSearch2');if(inp){inp.focus();inp.setSelectionRange(q.length,q.length);}}
 }
 
-function addCustom(){
-  const n=document.getElementById('pSearch').value.trim();
-  if(n)addEx(n);
+function pickEx(name){
+  const{data,day}=getDay();
+  day.ex.push({name,sets:[{kg:'',reps:''}],rpe:0});
+  save(data);
+  pickerOpen=false;
+  render();
+  setTimeout(()=>{const m=document.getElementById('app');m.scrollTop=m.scrollHeight;},50);
+}
+
+function addCustomFromPicker(){
+  const inp=document.getElementById('pSearch2');
+  const n=inp?inp.value.trim():'';
+  if(n)pickEx(n);
 }
 
 // ══════════════════════════
