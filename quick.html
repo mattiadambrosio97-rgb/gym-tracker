@@ -61,6 +61,7 @@
 }
 
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+button, input, select, [onclick] { touch-action:manipulation; }
 html, body { height:100%; overflow:hidden; }
 body {
   background:var(--bg); color:var(--text);
@@ -310,12 +311,13 @@ main {
    EXERCISE PICKER
    ══════════════════════════ */
 .picker-overlay {
-  position:fixed; inset:0; z-index:500;
+  position:fixed; top:0; left:0; right:0; bottom:0; z-index:500;
   background:rgba(0,0,0,.7);
-  display:none;
-  align-items:flex-end; justify-content:center;
+  display:flex; align-items:flex-end; justify-content:center;
+  visibility:hidden; opacity:0; pointer-events:none;
+  transition:opacity .2s, visibility .2s;
 }
-.picker-overlay.show { display:flex; }
+.picker-overlay.show { visibility:visible; opacity:1; pointer-events:auto; }
 .picker {
   background:var(--card); border-radius:20px 20px 0 0;
   width:100%; max-width:500px; max-height:80vh;
@@ -587,7 +589,7 @@ function render(){
     });
   }
 
-  h+=`<button class="add-ex" onclick="openPicker()">+ Aggiungi esercizio</button>`;
+  h+=`<button class="add-ex" id="addExBtn">+ Aggiungi esercizio</button>`;
 
   // Volume
   let vol=0;
@@ -595,6 +597,10 @@ function render(){
   if(vol>0) h+=`<div class="vol-sum">Volume totale: <strong>${vol.toLocaleString('it-IT')} kg</strong></div>`;
 
   document.getElementById('app').innerHTML=h;
+
+  // Bind add exercise button (addEventListener piu affidabile di onclick su mobile)
+  const addBtn=document.getElementById('addExBtn');
+  if(addBtn) addBtn.addEventListener('pointerdown',function(e){e.preventDefault();openPicker();});
 }
 
 // ══════════════════════════
