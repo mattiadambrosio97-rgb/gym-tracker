@@ -632,24 +632,36 @@ function renderPicker(){
   if(q)list=list.filter(e=>e.n.toLowerCase().includes(q)||e.m.toLowerCase().includes(q));
 
   const muscles=MUSCLES.map(m=>
-    `<button class="m-pill ${m===mFilter?'on':''}" onclick="mFilter='${m}';renderPicker()">${m}</button>`
+    `<button class="m-pill ${m===mFilter?'on':''}" data-m="${m}">${m}</button>`
   ).join('');
 
   const items=list.slice(0,40).map(e=>
-    `<div class="pick-item" onclick="pickEx('${e.n.replace(/'/g,"\\'")}')">
+    `<button class="pick-item" data-ex="${e.n.replace(/"/g,'&quot;')}">
       <span>${e.n}</span><span class="tag">${e.m}</span>
-    </div>`
+    </button>`
   ).join('');
 
   document.getElementById('app').innerHTML=`
-    <button class="picker-back" onclick="closePicker()">&#8592; Torna all'allenamento</button>
-    <input class="picker-search" id="pSearch2" placeholder="Cerca esercizio..." oninput="renderPicker()" value="${q}">
-    <div class="picker-muscles">${muscles}</div>
-    <div>${items}</div>
-    <button class="pick-custom" onclick="addCustomFromPicker()">+ Crea personalizzato</button>
+    <button class="picker-back" id="pickerBack">&#8592; Torna all'allenamento</button>
+    <input class="picker-search" id="pSearch2" placeholder="Cerca esercizio..." value="${q}">
+    <div class="picker-muscles" id="pMusclesWrap">${muscles}</div>
+    <div id="pItemsWrap">${items}</div>
+    <button class="pick-custom" id="pickerCustom">+ Crea personalizzato</button>
   `;
 
-  // Mantieni il focus sull'input se stava scrivendo
+  // Event delegation — un unico listener per tutto
+  document.getElementById('pickerBack').addEventListener('pointerup',closePicker);
+  document.getElementById('pSearch2').addEventListener('input',renderPicker);
+  document.getElementById('pickerCustom').addEventListener('pointerup',addCustomFromPicker);
+  document.getElementById('pItemsWrap').addEventListener('pointerup',function(e){
+    const item=e.target.closest('[data-ex]');
+    if(item) pickEx(item.getAttribute('data-ex'));
+  });
+  document.getElementById('pMusclesWrap').addEventListener('pointerup',function(e){
+    const pill=e.target.closest('.m-pill');
+    if(pill){mFilter=pill.getAttribute('data-m');renderPicker();}
+  });
+
   if(q){const inp=document.getElementById('pSearch2');if(inp){inp.focus();inp.setSelectionRange(q.length,q.length);}}
 }
 
