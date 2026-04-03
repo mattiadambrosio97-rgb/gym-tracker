@@ -577,7 +577,7 @@ function render(){
 
   // Bind add exercise button (addEventListener piu affidabile di onclick su mobile)
   const addBtn=document.getElementById('addExBtn');
-  if(addBtn) addBtn.addEventListener('pointerdown',function(e){e.preventDefault();openPicker();});
+  if(addBtn) addBtn.addEventListener('click',function(){openPicker();});
 }
 
 // ══════════════════════════
@@ -649,15 +649,15 @@ function renderPicker(){
     <button class="pick-custom" id="pickerCustom">+ Crea personalizzato</button>
   `;
 
-  // Event delegation — un unico listener per tutto
-  document.getElementById('pickerBack').addEventListener('pointerup',closePicker);
+  // Event delegation — click e piu affidabile di pointerup su mobile
+  document.getElementById('pickerBack').addEventListener('click',closePicker);
   document.getElementById('pSearch2').addEventListener('input',renderPicker);
-  document.getElementById('pickerCustom').addEventListener('pointerup',addCustomFromPicker);
-  document.getElementById('pItemsWrap').addEventListener('pointerup',function(e){
+  document.getElementById('pickerCustom').addEventListener('click',addCustomFromPicker);
+  document.getElementById('pItemsWrap').addEventListener('click',function(e){
     const item=e.target.closest('[data-ex]');
     if(item) pickEx(item.getAttribute('data-ex'));
   });
-  document.getElementById('pMusclesWrap').addEventListener('pointerup',function(e){
+  document.getElementById('pMusclesWrap').addEventListener('click',function(e){
     const pill=e.target.closest('.m-pill');
     if(pill){mFilter=pill.getAttribute('data-m');renderPicker();}
   });
