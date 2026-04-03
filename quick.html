@@ -575,9 +575,7 @@ function render(){
 
   document.getElementById('app').innerHTML=h;
 
-  // Bind add exercise button (addEventListener piu affidabile di onclick su mobile)
-  const addBtn=document.getElementById('addExBtn');
-  if(addBtn) addBtn.addEventListener('click',function(){openPicker();});
+  // addExBtn gestito dal global click handler
 }
 
 // ══════════════════════════
@@ -649,18 +647,7 @@ function renderPicker(){
     <button class="pick-custom" id="pickerCustom">+ Crea personalizzato</button>
   `;
 
-  // Event delegation — click e piu affidabile di pointerup su mobile
-  document.getElementById('pickerBack').addEventListener('click',closePicker);
   document.getElementById('pSearch2').addEventListener('input',renderPicker);
-  document.getElementById('pickerCustom').addEventListener('click',addCustomFromPicker);
-  document.getElementById('pItemsWrap').addEventListener('click',function(e){
-    const item=e.target.closest('[data-ex]');
-    if(item) pickEx(item.getAttribute('data-ex'));
-  });
-  document.getElementById('pMusclesWrap').addEventListener('click',function(e){
-    const pill=e.target.closest('.m-pill');
-    if(pill){mFilter=pill.getAttribute('data-m');renderPicker();}
-  });
 
   if(q){const inp=document.getElementById('pSearch2');if(inp){inp.focus();inp.setSelectionRange(q.length,q.length);}}
 }
@@ -719,6 +706,30 @@ function updTDisp(){
   d.textContent=`${sign}${m}:${String(s).padStart(2,'0')}`;
   d.className=tSec<=0?'timer-display done':tSec<=10?'timer-display warn':'timer-display';
 }
+
+// ══════════════════════════
+//  GLOBAL TAP HANDLER (un unico listener, non si perde mai)
+// ══════════════════════════
+document.addEventListener('click',function(e){
+  const t=e.target;
+
+  // Picker: esercizio selezionato
+  const exBtn=t.closest('[data-ex]');
+  if(exBtn){pickEx(exBtn.getAttribute('data-ex'));return;}
+
+  // Picker: filtro muscolo
+  const mBtn=t.closest('[data-m]');
+  if(mBtn){mFilter=mBtn.getAttribute('data-m');renderPicker();return;}
+
+  // Picker: torna indietro
+  if(t.closest('#pickerBack')){closePicker();return;}
+
+  // Picker: crea personalizzato
+  if(t.closest('#pickerCustom')){addCustomFromPicker();return;}
+
+  // Main: aggiungi esercizio
+  if(t.closest('#addExBtn')){openPicker();return;}
+});
 
 // ══════════════════════════
 //  INIT
