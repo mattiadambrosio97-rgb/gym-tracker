@@ -40,6 +40,22 @@ header h1 em{font-style:normal;color:var(--accent2)}
 
 main{flex:1;overflow-y:auto;padding:12px;padding-bottom:calc(90px + var(--safe-b));-webkit-overflow-scrolling:touch}
 .date-bar{text-align:center;font-size:11px;color:var(--text3);font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:1.5px}
+.date-input{background:var(--card);border:1px solid var(--border);color:var(--text);font-size:14px;font-weight:700;font-family:inherit;padding:8px 14px;border-radius:10px;outline:none;margin-left:8px}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:3px;background:var(--card2);border-radius:10px;padding:3px;margin-bottom:12px}
+.tab-btn{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;color:var(--text3);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.tab-btn.on{background:var(--accent);color:#fff}
+
+/* ── HISTORY CARD ── */
+.hist-card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:8px;border:1px solid var(--border);cursor:pointer}
+.hist-card:active{border-color:var(--accent)}
+.hist-date{font-size:14px;font-weight:800;margin-bottom:4px}
+.hist-exs{font-size:12px;color:var(--text2)}
+.hist-vol{font-size:12px;color:var(--accent2);font-weight:700;margin-top:4px}
+
+/* ── SAVE BTN ── */
+.save-btn{width:100%;padding:14px;border-radius:var(--r);border:none;background:var(--green);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin:12px 0}
 
 /* ── EXERCISE ROW ── */
 .ex-card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:10px;border:1px solid var(--border)}
@@ -59,6 +75,13 @@ main{flex:1;overflow-y:auto;padding:12px;padding-bottom:calc(90px + var(--safe-b
 .rpe-sel{width:100%;padding:10px 2px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;font-weight:700;text-align:center;font-family:inherit;outline:none;-webkit-appearance:none;appearance:none}
 .set-del{width:26px;height:26px;border-radius:50%;border:none;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .add-set{width:100%;padding:8px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px}
+
+/* ── CARDIO ── */
+.cardio-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.cardio-field{display:flex;flex-direction:column;gap:4px}
+.cardio-label{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.cardio-input{width:100%;padding:12px 8px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:20px;font-weight:800;text-align:center;font-family:inherit;outline:none}
+.cardio-input:focus{border-color:var(--accent)}
 
 /* RPE per serie - dentro il select */
 
@@ -132,9 +155,11 @@ const EX_GROUPS = {
   'Glutei': ['Hip Thrust Bilanciere','Hip Thrust Smith','Glute Bridge','Abductor Machine','Adductor Machine','Kick Back Cavo Glutei','Sumo Squat'],
   'Polpacci': ['Calf Raise in Piedi','Calf Raise Seduto','Calf Raise Smith','Calf Raise Leg Press'],
   'Core': ['Crunch Macchina','Crunch ai Cavi','Crunch Inverso','Plank','Side Plank','Russian Twist','Leg Raise Sospeso','Ab Wheel','Woodchop Cavo','Pallof Press'],
+  'Cardio': ['Tapis Roulant','Step','Ellittica','Cyclette','Vogatore'],
 };
 
 const ALL_EX=[];Object.values(EX_GROUPS).forEach(exs=>exs.forEach(e=>ALL_EX.push(e)));
+const CARDIO_EX=EX_GROUPS['Cardio']||[];
 
 // Options per il select
 function buildOptions(selected){
@@ -149,7 +174,8 @@ function buildOptions(selected){
 }
 
 let profile='mattia';
-const today=new Date().toISOString().split('T')[0];
+let currentDate=new Date().toISOString().split('T')[0];
+let currentTab='workout'; // 'workout' o 'history'
 const KEY='gymq_data';
 
 // Theme
@@ -181,8 +207,8 @@ function save(d){d._ts=Date.now();localStorage.setItem(KEY,JSON.stringify(d));sy
 function getDay(){
   const d=load();
   if(!d[profile]) d[profile]={};
-  if(!d[profile][today]) d[profile][today]={ex:[]};
-  return{data:d,day:d[profile][today]};
+  if(!d[profile][currentDate]) d[profile][currentDate]={ex:[]};
+  return{data:d,day:d[profile][currentDate]};
 }
 
 let sTo=null;
@@ -199,10 +225,30 @@ fbdb.ref('gym-quick').on('value',snap=>{
 // ══════════════════════════
 //  RENDER
 // ══════════════════════════
+function switchTab(t){currentTab=t;render();}
+function changeDate(d){currentDate=d;render();}
+
 function render(){
+  let h='';
+
+  // Tabs
+  h+=`<div class="tabs">
+    <button class="tab-btn ${currentTab==='workout'?'on':''}" onclick="switchTab('workout')">Allenamento</button>
+    <button class="tab-btn ${currentTab==='history'?'on':''}" onclick="switchTab('history')">Storico</button>
+  </div>`;
+
+  if(currentTab==='history'){
+    h+=renderHistory();
+    document.getElementById('app').innerHTML=h;
+    return;
+  }
+
+  // Date picker
+  h+=`<div class="date-bar">
+    <input class="date-input" type="date" value="${currentDate}" onchange="changeDate(this.value)">
+  </div>`;
+
   const{day}=getDay();
-  const dayName=new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
-  let h=`<div class="date-bar">${dayName}</div>`;
 
   if(!day.ex.length){
     h+=`<div style="text-align:center;padding:50px 20px;color:var(--text3)">
@@ -232,24 +278,78 @@ function render(){
          <button class="ex-del" onclick="resetExName(${ei})" style="font-size:11px;width:auto;padding:0 8px;border-radius:8px">Lista</button>`
       : `<select class="ex-select" onchange="changeEx(${ei},this.value)">${buildOptions(ex.name)}</select>`;
 
-    h+=`<div class="ex-card">
-      <div class="ex-top">
-        ${exField}
-        <button class="ex-del" onclick="delEx(${ei})">&#128465;</button>
-      </div>
-      <div class="sets-head"><span></span><span>KG</span><span>RIP</span><span>RPE</span><span></span></div>
-      ${sets}
-      <button class="add-set" onclick="addSet(${ei})">+ Serie</button>
-    </div>`;
+    const isCardio = CARDIO_EX.includes(ex.name);
+
+    if(isCardio){
+      h+=`<div class="ex-card">
+        <div class="ex-top">
+          ${exField}
+          <button class="ex-del" onclick="delEx(${ei})">&#128465;</button>
+        </div>
+        <div class="cardio-row">
+          <div class="cardio-field">
+            <span class="cardio-label">Minuti</span>
+            <input class="cardio-input" type="number" inputmode="numeric" value="${ex.minuti||''}" placeholder="0" onchange="upCardio(${ei},'minuti',this.value)">
+          </div>
+          <div class="cardio-field">
+            <span class="cardio-label">Calorie</span>
+            <input class="cardio-input" type="number" inputmode="numeric" value="${ex.calorie||''}" placeholder="0" onchange="upCardio(${ei},'calorie',this.value)">
+          </div>
+        </div>
+      </div>`;
+    } else {
+      h+=`<div class="ex-card">
+        <div class="ex-top">
+          ${exField}
+          <button class="ex-del" onclick="delEx(${ei})">&#128465;</button>
+        </div>
+        <div class="sets-head"><span></span><span>KG</span><span>RIP</span><span>RPE</span><span></span></div>
+        ${sets}
+        <button class="add-set" onclick="addSet(${ei})">+ Serie</button>
+      </div>`;
+    }
   });
 
   h+=`<button class="add-ex" onclick="addEx()">+ Aggiungi esercizio</button>`;
 
   let vol=0;
-  day.ex.forEach(ex=>ex.sets.forEach(s=>{vol+=(parseFloat(s.kg)||0)*(parseInt(s.reps)||0);}));
+  day.ex.forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{vol+=(parseFloat(s.kg)||0)*(parseInt(s.reps)||0);});});
   if(vol>0) h+=`<div class="vol-sum">Volume totale: <strong>${vol.toLocaleString('it-IT')} kg</strong></div>`;
 
+  if(day.ex.length>0){
+    h+=`<button class="save-btn" onclick="saveSession()">&#10003; Sessione salvata</button>`;
+  }
+
   document.getElementById('app').innerHTML=h;
+}
+
+function renderHistory(){
+  const data=load();
+  const pdata=data[profile]||{};
+  const dates=Object.keys(pdata).filter(k=>k.match(/^\d{4}-\d{2}-\d{2}$/)).sort().reverse();
+  if(!dates.length) return `<div style="text-align:center;padding:50px 20px;color:var(--text3)"><p>Nessuna sessione ancora</p></div>`;
+  let h='';
+  dates.forEach(d=>{
+    const session=pdata[d];
+    if(!session.ex||!session.ex.length) return;
+    const names=session.ex.map(e=>e.name||'?').join(', ');
+    let vol=0;
+    session.ex.forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{vol+=(parseFloat(s.kg)||0)*(parseInt(s.reps)||0);});});
+    const dateObj=new Date(d+'T00:00:00');
+    const label=dateObj.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+    h+=`<div class="hist-card" onclick="currentDate='${d}';currentTab='workout';render()">
+      <div class="hist-date">${label}</div>
+      <div class="hist-exs">${names}</div>
+      ${vol>0?`<div class="hist-vol">Volume: ${vol.toLocaleString('it-IT')} kg</div>`:''}
+    </div>`;
+  });
+  return h;
+}
+
+function saveSession(){
+  const{data}=getDay();
+  save(data);
+  alert('Sessione salvata!');
 }
 
 // ══════════════════════════
@@ -298,6 +398,11 @@ function addSet(ei){
 }
 function delSet(ei,si){const{data,day}=getDay();day.ex[ei].sets.splice(si,1);save(data);render();}
 function upSet(ei,si,f,v){const{data,day}=getDay();day.ex[ei].sets[si][f]=v;save(data);}
+function upCardio(ei,field,v){
+  const{data,day}=getDay();
+  day.ex[ei][field]=v;
+  save(data);
+}
 // RPE ora e per serie, gestito da upSet()
 
 // ══════════════════════════
