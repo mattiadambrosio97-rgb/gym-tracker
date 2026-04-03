@@ -244,11 +244,14 @@ main {
    ══════════════════════════ */
 .timer-overlay {
   position:fixed; inset:0; z-index:999;
-  background:var(--bg); display:flex; flex-direction:column;
+  background:var(--bg);
+  display:none;
+  flex-direction:column;
   align-items:center; justify-content:center; gap:28px;
-  transform:translateY(100%); transition:transform .3s ease, background .3s;
+  padding-bottom:40px;
+  transition:background .3s;
 }
-.timer-overlay.show { transform:translateY(0); }
+.timer-overlay.show { display:flex; }
 
 .timer-close {
   position:absolute; top:calc(12px + var(--safe-t)); right:16px;
@@ -293,7 +296,7 @@ main {
 
 /* ── TIMER FAB ── */
 .timer-fab {
-  position:fixed; bottom:calc(16px + var(--safe-b)); left:50%; transform:translateX(-50%);
+  position:fixed; bottom:calc(28px + var(--safe-b)); left:50%; transform:translateX(-50%);
   width:56px; height:56px; border-radius:50%;
   background:var(--accent); color:#fff;
   font-size:24px; border:none; cursor:pointer;
@@ -308,19 +311,17 @@ main {
    ══════════════════════════ */
 .picker-overlay {
   position:fixed; inset:0; z-index:500;
-  background:rgba(0,0,0,.7); display:flex;
+  background:rgba(0,0,0,.7);
+  display:none;
   align-items:flex-end; justify-content:center;
-  opacity:0; pointer-events:none; transition:opacity .2s;
 }
-.picker-overlay.show { opacity:1; pointer-events:auto; }
+.picker-overlay.show { display:flex; }
 .picker {
   background:var(--card); border-radius:20px 20px 0 0;
   width:100%; max-width:500px; max-height:80vh;
   padding:20px 16px calc(20px + var(--safe-b));
-  overflow-y:auto; transform:translateY(100%);
-  transition:transform .3s cubic-bezier(.16,1,.3,1), background .3s;
+  overflow-y:auto; transition:background .3s;
 }
-.picker-overlay.show .picker { transform:translateY(0); }
 .picker h2 { font-size:17px; font-weight:800; margin-bottom:12px; }
 .picker-close {
   float:right; width:32px; height:32px; border-radius:50%;
@@ -639,7 +640,6 @@ function openPicker(){
   document.getElementById('pSearch').value='';
   renderMuscles();filterPick();
   document.getElementById('pickerOv').classList.add('show');
-  setTimeout(()=>document.getElementById('pSearch').focus(),300);
 }
 function closePicker(){document.getElementById('pickerOv').classList.remove('show');}
 
