@@ -50,21 +50,17 @@ main{flex:1;overflow-y:auto;padding:12px;padding-bottom:calc(90px + var(--safe-b
 .ex-del{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
 /* ── SETS ── */
-.sets-head{display:grid;grid-template-columns:28px 1fr 1fr 28px;gap:5px;margin-bottom:4px}
+.sets-head{display:grid;grid-template-columns:28px 1fr 1fr 56px 28px;gap:5px;margin-bottom:4px}
 .sets-head span{font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;text-align:center;letter-spacing:.5px}
-.set-row{display:grid;grid-template-columns:28px 1fr 1fr 28px;gap:5px;margin-bottom:4px;align-items:center}
+.set-row{display:grid;grid-template-columns:28px 1fr 1fr 56px 28px;gap:5px;margin-bottom:4px;align-items:center}
 .set-num{width:26px;height:26px;border-radius:50%;background:var(--card2);color:var(--text2);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
 .set-input{width:100%;padding:10px 4px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:17px;font-weight:700;text-align:center;font-family:inherit;outline:none}
 .set-input:focus{border-color:var(--accent)}
+.rpe-sel{width:100%;padding:10px 2px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;font-weight:700;text-align:center;font-family:inherit;outline:none;-webkit-appearance:none;appearance:none}
 .set-del{width:26px;height:26px;border-radius:50%;border:none;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .add-set{width:100%;padding:8px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px}
 
-/* ── RPE ── */
-.rpe-row{display:flex;gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);align-items:center}
-.rpe-label{font-size:10px;color:var(--text3);font-weight:700;margin-right:2px;white-space:nowrap}
-.rpe-btn{flex:1;padding:7px 0;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center}
-.rpe-btn.on{border-color:transparent;color:#fff}
-.rpe-btn.rl.on{background:var(--green)}.rpe-btn.rm.on{background:var(--orange)}.rpe-btn.rh.on{background:var(--red)}
+/* RPE per serie - dentro il select */
 
 /* ── ADD EXERCISE ── */
 .add-ex{width:100%;padding:14px;border-radius:var(--r);border:1px dashed var(--text3);background:transparent;color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px}
@@ -175,7 +171,12 @@ const fbdb=firebase.database();
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||def();}catch(e){return def();}}
 function def(){return{mattia:{},michelle:{},_ts:0};}
 function save(d){d._ts=Date.now();localStorage.setItem(KEY,JSON.stringify(d));syncUp();}
-function getDay(){const d=load();if(!d[profile][today])d[profile][today]={ex:[]};return{data:d,day:d[profile][today]};}
+function getDay(){
+  const d=load();
+  if(!d[profile]) d[profile]={};
+  if(!d[profile][today]) d[profile][today]={ex:[]};
+  return{data:d,day:d[profile][today]};
+}
 
 let sTo=null;
 function syncUp(){clearTimeout(sTo);sTo=setTimeout(()=>{
@@ -206,33 +207,25 @@ function render(){
   day.ex.forEach((ex,ei)=>{
     let sets='';
     ex.sets.forEach((s,si)=>{
+      let rpeOpts='<option value="">-</option>';
+      for(let r=1;r<=10;r++) rpeOpts+=`<option value="${r}" ${s.rpe==r?'selected':''}>${r}</option>`;
       sets+=`<div class="set-row">
         <div class="set-num">${si+1}</div>
         <input class="set-input" type="number" inputmode="decimal" step="0.5" value="${s.kg||''}" placeholder="kg" onchange="upSet(${ei},${si},'kg',this.value)" onfocus="this.select()">
         <input class="set-input" type="number" inputmode="numeric" value="${s.reps||''}" placeholder="rip" onchange="upSet(${ei},${si},'reps',this.value)" onfocus="this.select()">
+        <select class="rpe-sel" onchange="upSet(${ei},${si},'rpe',this.value)">${rpeOpts}</select>
         <button class="set-del" onclick="delSet(${ei},${si})">&#10005;</button>
       </div>`;
     });
-
-    const rpe=parseInt(ex.rpe)||0;
-    let rpeBtns='';
-    for(let r=1;r<=10;r++){
-      const cls=r<=4?'rl':r<=7?'rm':'rh';
-      rpeBtns+=`<button class="rpe-btn ${cls} ${rpe===r?'on':''}" onclick="setRPE(${ei},${r})">${r}</button>`;
-    }
 
     h+=`<div class="ex-card">
       <div class="ex-top">
         <input class="ex-input" list="exList" value="${ex.name}" placeholder="Cerca o scrivi esercizio..." onchange="changeEx(${ei},this.value)" onfocus="this.select()">
         <button class="ex-del" onclick="delEx(${ei})">&#128465;</button>
       </div>
-      <div class="sets-head"><span></span><span>KG</span><span>RIP</span><span></span></div>
+      <div class="sets-head"><span></span><span>KG</span><span>RIP</span><span>RPE</span><span></span></div>
       ${sets}
       <button class="add-set" onclick="addSet(${ei})">+ Serie</button>
-      <div class="rpe-row">
-        <span class="rpe-label">RPE</span>
-        ${rpeBtns}
-      </div>
     </div>`;
   });
 
@@ -280,11 +273,7 @@ function addSet(ei){
 }
 function delSet(ei,si){const{data,day}=getDay();day.ex[ei].sets.splice(si,1);save(data);render();}
 function upSet(ei,si,f,v){const{data,day}=getDay();day.ex[ei].sets[si][f]=v;save(data);}
-function setRPE(ei,v){
-  const{data,day}=getDay();
-  day.ex[ei].rpe=day.ex[ei].rpe===v?0:v;
-  save(data);render();
-}
+// RPE ora e per serie, gestito da upSet()
 
 // ══════════════════════════
 //  TIMER
