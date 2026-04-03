@@ -44,9 +44,9 @@ main{flex:1;overflow-y:auto;padding:12px;padding-bottom:calc(90px + var(--safe-b
 /* ── EXERCISE ROW ── */
 .ex-card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:10px;border:1px solid var(--border)}
 .ex-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.ex-input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:15px;font-weight:700;font-family:inherit;outline:none}
-.ex-input:focus{border-color:var(--accent)}
-.ex-input::placeholder{color:var(--text3);font-weight:600}
+.ex-select{flex:1;padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;font-weight:700;font-family:inherit;outline:none}
+.ex-custom{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--accent);background:var(--input-bg);color:var(--text);font-size:15px;font-weight:700;font-family:inherit;outline:none;margin-right:4px}
+.ex-custom::placeholder{color:var(--text3)}
 .ex-del{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
 /* ── SETS ── */
@@ -134,11 +134,18 @@ const EX_GROUPS = {
   'Core': ['Crunch Macchina','Crunch ai Cavi','Crunch Inverso','Plank','Side Plank','Russian Twist','Leg Raise Sospeso','Ab Wheel','Woodchop Cavo','Pallof Press'],
 };
 
-// Flat list for datalist
-const ALL_EX = [];
-Object.entries(EX_GROUPS).forEach(([group,exs])=>{exs.forEach(e=>ALL_EX.push(e));});
-function buildDatalist(){
-  return ALL_EX.map(e=>`<option value="${e}">`).join('');
+const ALL_EX=[];Object.values(EX_GROUPS).forEach(exs=>exs.forEach(e=>ALL_EX.push(e)));
+
+// Options per il select
+function buildOptions(selected){
+  let h=selected?'':`<option value="">-- Scegli esercizio --</option>`;
+  Object.entries(EX_GROUPS).forEach(([group,exs])=>{
+    h+=`<optgroup label="${group}">`;
+    exs.forEach(e=>{h+=`<option value="${e}" ${e===selected?'selected':''}>${e}</option>`;});
+    h+='</optgroup>';
+  });
+  h+=`<option value="__custom__">Altro (scrivi il nome)...</option>`;
+  return h;
 }
 
 let profile='mattia';
@@ -218,9 +225,16 @@ function render(){
       </div>`;
     });
 
+    // Se l'esercizio non e nella lista, mostra input testo
+    const isCustom = ex.name && !ALL_EX.includes(ex.name);
+    const exField = isCustom
+      ? `<input class="ex-custom" value="${ex.name}" placeholder="Nome esercizio" onchange="changeEx(${ei},this.value)">
+         <button class="ex-del" onclick="resetExName(${ei})" style="font-size:11px;width:auto;padding:0 8px;border-radius:8px">Lista</button>`
+      : `<select class="ex-select" onchange="changeEx(${ei},this.value)">${buildOptions(ex.name)}</select>`;
+
     h+=`<div class="ex-card">
       <div class="ex-top">
-        <input class="ex-input" list="exList" value="${ex.name}" placeholder="Cerca o scrivi esercizio..." onchange="changeEx(${ei},this.value)" onfocus="this.select()">
+        ${exField}
         <button class="ex-del" onclick="delEx(${ei})">&#128465;</button>
       </div>
       <div class="sets-head"><span></span><span>KG</span><span>RIP</span><span>RPE</span><span></span></div>
@@ -229,7 +243,6 @@ function render(){
     </div>`;
   });
 
-  h+=`<datalist id="exList">${buildDatalist()}</datalist>`;
   h+=`<button class="add-ex" onclick="addEx()">+ Aggiungi esercizio</button>`;
 
   let vol=0;
@@ -257,8 +270,20 @@ function addEx(){
 
 function changeEx(ei,name){
   const{data,day}=getDay();
-  day.ex[ei].name=name;
-  save(data);
+  if(name==='__custom__'){
+    const custom=prompt('Nome esercizio:');
+    if(!custom){render();return;}
+    day.ex[ei].name=custom.trim();
+  } else {
+    day.ex[ei].name=name;
+  }
+  save(data);render();
+}
+
+function resetExName(ei){
+  const{data,day}=getDay();
+  day.ex[ei].name='';
+  save(data);render();
 }
 
 function delEx(ei){
